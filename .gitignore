@@ -1,3 +1,2 @@
-GuidanceMissile/*
-!GuidanceMissile/Assets
-
+/GuidanceMissile/*
+!/GuidanceMissile/Assets/GuidanceMissile/*

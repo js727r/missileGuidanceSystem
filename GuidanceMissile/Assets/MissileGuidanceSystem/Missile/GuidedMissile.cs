@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace MissileGuidanceSystem.Scripts.Missile
 {
@@ -9,13 +10,12 @@ namespace MissileGuidanceSystem.Scripts.Missile
         public TrackingLevel trackingLevel;
         public TargetType targetType;
         public GameObject targetObject;
-        public Vector3 coord;
+        public Vector3 targetCoord;
 
-        public float trackingPower = 2f;
+        public float rotationPerTick = 2f;
         public float missileSpeed = 10f;
         public float turningForce = 30f;
-
-
+        
         private Rigidbody _rigidbody;
 
         // Start is called before the first frame update
@@ -25,53 +25,69 @@ namespace MissileGuidanceSystem.Scripts.Missile
             IgnorePhysics();
         }
 
-        // Update is called once per frame
-        void FixedUpdate()
-        {
-            GuideMissileDirection();
-            MoveToForward();
-        }
-
         private void IgnorePhysics()
         {
-            // transform.position = new Vector3(transform.position.x, 0, transform.position.z);
-            // _rigidbody.velocity = Vector3.zero;
             _rigidbody.freezeRotation = true;
         }
 
-        private void MoveToForward()
+        // Update is called once per frame
+        void FixedUpdate()
+        {
+            MoveForward();
+            GuideMissileDirection();
+        }
+        
+        private void MoveForward()
         {
             _rigidbody.velocity = transform.forward * missileSpeed;
         }
 
         private void GuideMissileDirection()
         {
-            // valid check
             if (trackingType is TrackingType.None
                 || targetType is TargetType.Object && targetObject is null) return;
 
-            // calculate LOS(Line of sight)
-            Vector3 LOS = Vector3.zero;
-            if (targetType is TargetType.Object)
-                LOS = targetObject.transform.position - transform.position;
-            else
-                LOS = coord - transform.position;
+            Quaternion guidedQuaternion = CalculateGuidedQuaternion();
 
-            Debug.DrawRay(transform.position, LOS, Color.red);
-            // calculate how much rotate
+            TryToLookAt(guidedQuaternion);
+        }
+        
+        private Quaternion CalculateGuidedQuaternion()
+        {
             Quaternion guidedQuaternion = transform.rotation;
+
+            Vector3 LOS = CalculateLineOfSight();
 
             if (trackingType is TrackingType.Pursuit)
             {
                 guidedQuaternion = Quaternion.LookRotation(LOS, transform.up);
             }
 
-            // rotate missile
+            return guidedQuaternion;
+        }
+        
+        private Vector3 CalculateLineOfSight()
+        {
+            // line of sight
+            Vector3 LOS;
+
+            if (targetType is TargetType.Object)
+                LOS = targetObject.transform.position - transform.position;
+            else
+                LOS = targetCoord - transform.position;
+
+            return LOS;
+        }
+        
+        private void TryToLookAt(Quaternion guidedQuaternion)
+        {
             if (trackingLevel is TrackingLevel.Level1)
+            {
                 transform.rotation = guidedQuaternion;
+            }
             else
             {
-                transform.rotation = Quaternion.RotateTowards(transform.rotation, guidedQuaternion, trackingPower);
+                transform.rotation = Quaternion.RotateTowards(transform.rotation, guidedQuaternion, rotationPerTick);
             }
         }
     }

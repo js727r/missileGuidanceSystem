@@ -10,45 +10,46 @@ namespace MissileGuidanceSystem.Scripts.Missile
         public TargetType targetType;
         public GameObject targetObject;
         public Vector3 coord;
-        
+
         public float trackingPower = 2f;
         public float missileSpeed = 10f;
         public float turningForce = 30f;
 
 
-
         private Rigidbody _rigidbody;
-        
+
         // Start is called before the first frame update
         void Awake()
         {
             _rigidbody = GetComponent<Rigidbody>();
-            
+            IgnorePhysics();
         }
 
         // Update is called once per frame
         void FixedUpdate()
         {
-            // _rigidbody.velocity = new Vector3(_rigidbody.velocity.x, 0, _rigidbody.velocity.z);
-            transform.position = new Vector3(transform.position.x, 0, transform.position.z);
-            _rigidbody.velocity = Vector3.zero;
-            
-            Guide();
-            // Thrust();
-
+            GuideMissileDirection();
+            MoveToForward();
         }
 
-        private void Thrust()
+        private void IgnorePhysics()
+        {
+            // transform.position = new Vector3(transform.position.x, 0, transform.position.z);
+            // _rigidbody.velocity = Vector3.zero;
+            _rigidbody.freezeRotation = true;
+        }
+
+        private void MoveToForward()
         {
             _rigidbody.velocity = transform.forward * missileSpeed;
         }
 
-        private void Guide()
+        private void GuideMissileDirection()
         {
             // valid check
             if (trackingType is TrackingType.None
                 || targetType is TargetType.Object && targetObject is null) return;
-            
+
             // calculate LOS(Line of sight)
             Vector3 LOS = Vector3.zero;
             if (targetType is TargetType.Object)
@@ -56,13 +57,13 @@ namespace MissileGuidanceSystem.Scripts.Missile
             else
                 LOS = coord - transform.position;
 
-            Debug.DrawRay(transform.position,LOS,Color.red);
+            Debug.DrawRay(transform.position, LOS, Color.red);
             // calculate how much rotate
             Quaternion guidedQuaternion = transform.rotation;
-            
+
             if (trackingType is TrackingType.Pursuit)
             {
-                guidedQuaternion = Quaternion.LookRotation(LOS,transform.up);
+                guidedQuaternion = Quaternion.LookRotation(LOS, transform.up);
             }
 
             // rotate missile
@@ -72,23 +73,27 @@ namespace MissileGuidanceSystem.Scripts.Missile
             {
                 transform.rotation = Quaternion.RotateTowards(transform.rotation, guidedQuaternion, trackingPower);
             }
-
         }
-        
     }
+
     public enum TrackingType
     {
-        None, Pursuit, PN
+        None,
+        Pursuit,
+        PN
     }
 
     public enum TargetType
     {
-        Object, Coord
+        Object,
+        Coord
     }
 
     public enum TrackingLevel
     {
-        Level1,Level2,Level3,Level4
+        Level1,
+        Level2,
+        Level3,
+        Level4
     }
-
 }

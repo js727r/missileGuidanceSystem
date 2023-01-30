@@ -1,3 +1,4 @@
 GuidanceMissile/*
 !GuidanceMissile/Assets
 *.meta
+*.unity

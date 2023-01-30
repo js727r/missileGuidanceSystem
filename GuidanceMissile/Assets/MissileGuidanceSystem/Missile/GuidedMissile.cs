@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace MissileGuidanceSystem.Scripts.Missile
 {
@@ -9,86 +10,106 @@ namespace MissileGuidanceSystem.Scripts.Missile
         public TrackingLevel trackingLevel;
         public TargetType targetType;
         public GameObject targetObject;
-        public Vector3 coord;
-        
-        public float trackingPower = 2f;
+        public Vector3 targetCoord;
+
+        public float rotationPerTick = 2f;
         public float missileSpeed = 10f;
         public float turningForce = 30f;
-
-
-
-        private Rigidbody _rigidbody;
         
+        private Rigidbody _rigidbody;
+
         // Start is called before the first frame update
         void Awake()
         {
             _rigidbody = GetComponent<Rigidbody>();
-            
+            IgnorePhysics();
+        }
+
+        private void IgnorePhysics()
+        {
+            _rigidbody.freezeRotation = true;
         }
 
         // Update is called once per frame
         void FixedUpdate()
         {
-            // _rigidbody.velocity = new Vector3(_rigidbody.velocity.x, 0, _rigidbody.velocity.z);
-            transform.position = new Vector3(transform.position.x, 0, transform.position.z);
-            _rigidbody.velocity = Vector3.zero;
-            
-            Guide();
-            // Thrust();
-
+            MoveForward();
+            GuideMissileDirection();
         }
-
-        private void Thrust()
+        
+        private void MoveForward()
         {
             _rigidbody.velocity = transform.forward * missileSpeed;
         }
 
-        private void Guide()
+        private void GuideMissileDirection()
         {
-            // valid check
             if (trackingType is TrackingType.None
                 || targetType is TargetType.Object && targetObject is null) return;
-            
-            // calculate LOS(Line of sight)
-            Vector3 LOS = Vector3.zero;
+
+            Quaternion guidedQuaternion = CalculateGuidedQuaternion();
+
+            TryToLookAt(guidedQuaternion);
+        }
+        
+        private Quaternion CalculateGuidedQuaternion()
+        {
+            Quaternion guidedQuaternion = transform.rotation;
+
+            Vector3 LOS = CalculateLineOfSight();
+
+            if (trackingType is TrackingType.Pursuit)
+            {
+                guidedQuaternion = Quaternion.LookRotation(LOS, transform.up);
+            }
+
+            return guidedQuaternion;
+        }
+        
+        private Vector3 CalculateLineOfSight()
+        {
+            // line of sight
+            Vector3 LOS;
+
             if (targetType is TargetType.Object)
                 LOS = targetObject.transform.position - transform.position;
             else
-                LOS = coord - transform.position;
+                LOS = targetCoord - transform.position;
 
-            Debug.DrawRay(transform.position,LOS,Color.red);
-            // calculate how much rotate
-            Quaternion guidedQuaternion = transform.rotation;
-            
-            if (trackingType is TrackingType.Pursuit)
-            {
-                guidedQuaternion = Quaternion.LookRotation(LOS,transform.up);
-            }
-
-            // rotate missile
-            if (trackingLevel is TrackingLevel.Level1)
-                transform.rotation = guidedQuaternion;
-            else
-            {
-                transform.rotation = Quaternion.RotateTowards(transform.rotation, guidedQuaternion, trackingPower);
-            }
-
+            return LOS;
         }
         
+        private void TryToLookAt(Quaternion guidedQuaternion)
+        {
+            if (trackingLevel is TrackingLevel.Level1)
+            {
+                transform.rotation = guidedQuaternion;
+            }
+            else
+            {
+                transform.rotation = Quaternion.RotateTowards(transform.rotation, guidedQuaternion, rotationPerTick);
+            }
+        }
     }
+
     public enum TrackingType
     {
-        None, Pursuit, PN
+        None,
+        Pursuit,
+        PN
     }
 
     public enum TargetType
     {
-        Object, Coord
+        Object,
+        Coord
     }
 
     public enum TrackingLevel
     {
-        Level1,Level2,Level3,Level4
+        Level1,
+        Level2,
+        Level3,
+        Level4
     }
-
 }

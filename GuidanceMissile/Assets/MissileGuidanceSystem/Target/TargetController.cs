@@ -15,9 +15,10 @@ namespace MissileGuidanceSystem.Target
 
         private void MouseControl()
         {
-            if (!Input.GetMouseButton(0)) return;
-            
             var mouseVector = new Vector3(Input.GetAxisRaw("Mouse X"), 0,Input.GetAxisRaw("Mouse Y"));
+
+            mouseVector.y += ((Input.GetButton("Up") ? 1 : 0) + (Input.GetButton("Down") ? -1 : 0)) * 0.2f;
+            
             transform.position += mouseVector*mouseSensitive;
         }
     }
